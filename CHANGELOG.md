@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## Unreleased
+
+### Added
+
+- `refreshDelay` plugin option for `rails()` and `jsbundling()`. It waits the given milliseconds after the last `refresh` change before the full-page reload, and sends one reload for a burst of changes. Use it when Rails sees template changes late, e.g. with `EventedFileUpdateChecker`. Default: `0`, which reloads at once as before ([@olivier-thatch])
+
 ## rails_vite@0.2.3 / rails-vite-plugin@0.2.5 - 2026-06-09
 
 ### Added
@@ -93,6 +99,7 @@ and this project adheres to [Semantic Versioning].
 
 [@skryukov]: https://github.com/skryukov
 [@brodienguyen]: https://github.com/brodienguyen
+[@olivier-thatch]: https://github.com/olivier-thatch
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
