@@ -17,7 +17,7 @@ import { resolveAlias } from './shared/alias.js'
 import { resolveDevServerUrl, isAddressInfo, replaceOriginPlaceholder } from './shared/dev-server.js'
 import { resolveBundlerOptionsKey, getUserBundlerInput } from './shared/bundler-compat.js'
 import { ensureCommandShouldRunInEnvironment } from './shared/env-guard.js'
-import { refreshPaths, resolveRefreshPaths } from './shared/refresh.js'
+import { refreshPaths, resolveRefreshPaths, resolveRefreshWatchPaths } from './shared/refresh.js'
 import { readDevServerIndexHtml } from './shared/dev-server-page.js'
 import { resolveNoExternal } from './shared/ssr.js'
 import { bindExitHandler, removeOwnedFile } from './shared/cleanup.js'
@@ -149,7 +149,7 @@ export default function rails(options: RailsViteOptions = {}): Plugin {
       const resolvedRefreshPaths = resolveRefreshPaths(options.refresh)
       if (resolvedRefreshPaths.length) {
         const match = picomatch(resolvedRefreshPaths)
-        server.watcher.add(resolvedRefreshPaths)
+        server.watcher.add(resolveRefreshWatchPaths(resolvedRefreshPaths))
         server.watcher.on('change', (filePath: string) => {
           const relativePath = path.relative(process.cwd(), filePath)
           if (match(relativePath)) {
