@@ -54,7 +54,7 @@ module RailsVite
       latest = NEVER
       source_path = Rails.root.join(@config.source_dir).to_s
 
-      Find.find(source_path) do |path|
+      Find.find(source_path, *auto_build_path_matches) do |path|
         next unless File.file?(path)
         mtime = File.mtime(path)
         latest = mtime if mtime > latest
@@ -63,6 +63,14 @@ module RailsVite
       latest
     rescue Errno::ENOENT
       Time.now # source dir missing — trigger build to surface the error
+    end
+
+    # Globbed on each check so new matches are picked up. Missing paths match nothing.
+    def auto_build_path_matches
+      root = Rails.root.to_s
+      @config.auto_build_paths.flat_map do |pattern|
+        Dir.glob(pattern.to_s, base: root).map { |match| File.expand_path(match, root) }
+      end
     end
   end
 end

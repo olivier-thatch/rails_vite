@@ -15,6 +15,7 @@ class AutoBuildTest < Minitest::Test
     @config.manifest_path = @manifest_path
 
     @app = ->(env) { [200, {}, ["OK"]] }
+    @base_time = Time.now - 100
   end
 
   def teardown
@@ -116,6 +117,44 @@ class AutoBuildTest < Minitest::Test
     end
   end
 
+  def test_default_paths_include_root_build_config
+    assert built_after_changing("vite.config.ts")
+    assert built_after_changing("pnpm-lock.yaml")
+  end
+
+  def test_default_paths_exclude_app_directories
+    refute built_after_changing("app/views/home/index.html.erb")
+  end
+
+  def test_builds_when_a_file_in_an_extra_directory_is_newer
+    @config.auto_build_paths += ["app/views"]
+
+    assert built_after_changing("app/views/home/index.html.erb")
+  end
+
+  def test_builds_when_a_glob_match_is_newer
+    @config.auto_build_paths += ["config/vite_*.mts"]
+
+    assert built_after_changing("config/vite_plugins.mts")
+  end
+
+  def test_ignores_missing_extra_paths
+    @config.auto_build_paths += ["app/components", "config/missing_*.js"]
+    File.utime(@base_time, @base_time, File.join(@source_dir, "app.js"))
+    write_manifest(mtime: @base_time + 10)
+
+    refute built?
+  end
+
+  def test_skips_build_when_extra_paths_are_older_than_manifest
+    @config.auto_build_paths += ["app/views"]
+    write_input("app/views/home/index.html.erb", mtime: @base_time)
+    File.utime(@base_time, @base_time, File.join(@source_dir, "app.js"))
+    write_manifest(mtime: @base_time + 10)
+
+    refute built?
+  end
+
   def test_passes_request_through_to_app
     FileUtils.touch(File.join(@source_dir, "app.js"), mtime: Time.now - 10)
     write_manifest(mtime: Time.now)
@@ -130,6 +169,31 @@ class AutoBuildTest < Minitest::Test
 
   def with_root(&block)
     Rails.stub(:root, Pathname.new(@dir), &block)
+  end
+
+  # Source and manifest at the base time, the given input 10 seconds newer.
+  def built_after_changing(relative_path)
+    File.utime(@base_time, @base_time, File.join(@source_dir, "app.js"))
+    write_manifest(mtime: @base_time)
+    write_input(relative_path, mtime: @base_time + 10)
+    built?
+  end
+
+  def write_input(relative_path, mtime:)
+    path = File.join(@dir, relative_path)
+    FileUtils.mkdir_p(File.dirname(path))
+    File.write(path, "")
+    File.utime(mtime, mtime, path)
+  end
+
+  def built?
+    built = false
+    with_root do
+      stub_build(-> { built = true }) do
+        RailsVite::AutoBuild.new(@app, @config).call({})
+      end
+    end
+    built
   end
 
   def write_manifest(mtime: Time.now)

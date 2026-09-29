@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## Unreleased
+
+### Added
+
+- `auto_build_paths` config option: extra paths and globs, relative to `Rails.root`, that auto build checks for changes besides `sourceDir` (for example `app/views` for Tailwind). It defaults to the root-level Vite, PostCSS, Tailwind and TypeScript configs, `package.json`, and the lockfile, so changes to them now trigger a rebuild ([@olivier-thatch])
+
 ## rails_vite@0.2.3 / rails-vite-plugin@0.2.5 - 2026-06-09
 
 ### Added
@@ -93,6 +99,7 @@ and this project adheres to [Semantic Versioning].
 
 [@skryukov]: https://github.com/skryukov
 [@brodienguyen]: https://github.com/brodienguyen
+[@olivier-thatch]: https://github.com/olivier-thatch
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
