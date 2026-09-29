@@ -61,14 +61,35 @@ module RailsVite
     end
 
     def load_plugin_meta
-      JSON.parse(dev_meta_path.read)
+      meta = JSON.parse(dev_meta_path.read)
+      return meta if dev_server_alive?(meta["pid"])
+
+      load_build_meta
     rescue Errno::ENOENT
-      build_meta_path = manifest_path.dirname.join(META_FILENAME)
-      begin
-        JSON.parse(build_meta_path.read)
-      rescue Errno::ENOENT, JSON::ParserError
-        {}
+      load_build_meta
+    end
+
+    def load_build_meta
+      JSON.parse(manifest_path.dirname.join(META_FILENAME).read)
+    rescue Errno::ENOENT, JSON::ParserError
+      {}
+    end
+
+    # A hard kill of Vite (SIGKILL, OOM) does not remove the dev meta file.
+    # Ignore the file when its process is gone.
+    def dev_server_alive?(pid)
+      return true unless pid.is_a?(Integer) && pid.positive?
+
+      Process.kill(0, pid)
+      true
+    rescue Errno::EPERM
+      true
+    rescue Errno::ESRCH
+      unless @stale_dev_meta_pid == pid
+        @stale_dev_meta_pid = pid
+        Rails.logger&.warn("rails-vite: ignoring #{dev_meta_path}, Vite process #{pid} is not running")
       end
+      false
     end
   end
 end

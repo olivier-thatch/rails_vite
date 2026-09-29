@@ -47,6 +47,37 @@ class ConfigTest < Minitest::Test
     end
   end
 
+  def test_dev_server_running_with_live_pid
+    with_dev_meta(pid: Process.pid) do
+      assert @config.dev_server_running?
+      assert_equal "http://localhost:5173", @config.dev_server_url
+    end
+  end
+
+  def test_dev_server_not_running_with_dead_pid
+    with_dev_meta(pid: dead_pid) do
+      refute @config.dev_server_running?
+      assert_nil @config.dev_server_url
+    end
+  end
+
+  def test_dead_pid_falls_back_to_build_meta
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, "rails-vite.json"), '{"sourceDir":"app/frontend"}')
+      @config.manifest_path = Pathname.new(File.join(dir, "manifest.json"))
+
+      with_dev_meta(pid: dead_pid) do
+        assert_equal "app/frontend", @config.source_dir
+      end
+    end
+  end
+
+  def test_dev_server_running_with_non_integer_pid
+    with_dev_meta(pid: "123") do
+      assert @config.dev_server_running?
+    end
+  end
+
   def test_dev_server_url_nil_when_not_running
     assert_nil @config.dev_server_url
   end
@@ -137,5 +168,22 @@ class ConfigTest < Minitest::Test
 
       assert_equal "ssr", @config.ssr_output_dir
     end
+  end
+
+  private
+
+  def with_dev_meta(**extra)
+    Dir.mktmpdir do |dir|
+      meta = File.join(dir, "rails-vite.json")
+      File.write(meta, JSON.generate({url: "http://localhost:5173", sourceDir: "app/javascript", **extra}))
+      @config.dev_meta_path = Pathname.new(meta)
+      yield
+    end
+  end
+
+  def dead_pid
+    pid = Process.spawn("true")
+    Process.wait(pid)
+    pid
   end
 end
