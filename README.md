@@ -203,7 +203,7 @@ export default defineConfig({
 | `ssr` | — | SSR entry point |
 | `ssrOutDir` | `'ssr'` | SSR output directory |
 | `devMetaFile` | `'tmp/rails-vite.json'` | Dev metadata file path |
-| `buildDir` | `'vite'` | Build output subdirectory inside `public/` |
+| `buildDir` | `$RAILS_VITE_BUILD_DIR`, else `'vite-test'` in `test` mode, else `'vite'` | Build output subdirectory inside `public/`. The gem sets `RAILS_VITE_BUILD_DIR` from `config.rails_vite.build_dir` when it runs a build |
 | `publicDir` | `'public'` | Public directory |
 | `refresh` | `true` | Paths to watch for full-page reload. `true` watches `app/views/**` and `app/helpers/**` |
 | `prependSourceDirToEntries` | `true` | When `false`, entries are resolved without the `sourceDir` prefix. Set this when Vite's `root` is your `sourceDir` (see below) |
@@ -334,6 +334,18 @@ Rails.application.config.rails_vite.auto_build = false
 By default, auto build is enabled in development and test (`Rails.env.local?`).
 
 Note: for parallel test runners, disable auto build and use `rake vite:build` before the suite instead.
+
+## Build Mode
+
+`rake vite:build` and auto builds pass `--mode test` to `vite build` in the test environment, and no `--mode` elsewhere. This sets `import.meta.env.MODE` and chooses which `.env.[mode]` files Vite loads. If `MODE === 'test'` means "running under Vitest" in your app, a Rails system-test bundle then includes Vitest-only code. Choose another mode, or no mode:
+
+```ruby
+# config/initializers/rails_vite.rb
+Rails.application.config.rails_vite.build_mode = nil     # no --mode, so Vite uses "production"
+Rails.application.config.rails_vite.build_mode = "e2e"   # --mode e2e
+```
+
+The build mode does not change the build directory: the test environment still builds to `public/vite-test/`. The gem passes its `build_dir` to the plugin in the `RAILS_VITE_BUILD_DIR` environment variable, so the gem and the plugin always use the same directory. If you run `vite build` yourself, set `RAILS_VITE_BUILD_DIR` or the plugin's `buildDir` option to match.
 
 ## Testing the Build
 

@@ -1,3 +1,5 @@
+require "shellwords"
+
 module RailsVite
   module Tasks
     extend self
@@ -32,8 +34,15 @@ module RailsVite
 
     def build_command
       cmd = command_for(:build)
-      cmd += " --mode test" if Rails.env.test?
+      mode = RailsVite.config.build_mode
+      cmd += " --mode #{Shellwords.escape(mode)}" if mode
       cmd
+    end
+
+    # Use with build_command. The plugin builds into this dir, so the gem and
+    # the plugin use the same dir for all build modes.
+    def build_env
+      {"RAILS_VITE_BUILD_DIR" => RailsVite.config.build_dir}
     end
 
     def tool

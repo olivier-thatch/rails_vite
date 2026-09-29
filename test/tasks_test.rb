@@ -78,4 +78,58 @@ class TasksTest < Minitest::Test
     assert_equal "pnpm vite", RailsVite::Tasks.dev_command
     assert_equal "pnpm vite build", RailsVite::Tasks.build_command
   end
+
+  def test_build_command_adds_mode_test_in_test
+    FileUtils.touch("yarn.lock")
+    with_env("test") do
+      assert_equal "yarn vite build --mode test", RailsVite::Tasks.build_command
+    end
+  end
+
+  def test_build_command_uses_custom_build_mode
+    FileUtils.touch("yarn.lock")
+    with_config(build_mode: "e2e") do
+      assert_equal "yarn vite build --mode e2e", RailsVite::Tasks.build_command
+    end
+  end
+
+  def test_build_command_has_no_mode_when_build_mode_is_nil
+    FileUtils.touch("yarn.lock")
+    with_env("test") do
+      with_config(build_mode: nil) do
+        assert_equal "yarn vite build", RailsVite::Tasks.build_command
+      end
+    end
+  end
+
+  def test_build_env_sets_build_dir
+    assert_equal({"RAILS_VITE_BUILD_DIR" => "vite"}, RailsVite::Tasks.build_env)
+  end
+
+  def test_build_env_keeps_test_build_dir_without_mode_test
+    with_env("test") do
+      with_config(build_mode: nil) do
+        assert_equal({"RAILS_VITE_BUILD_DIR" => "vite-test"}, RailsVite::Tasks.build_env)
+        assert_equal Rails.root.join("public/vite-test/manifest.json"), RailsVite.config.manifest_path
+      end
+    end
+  end
+
+  def test_build_env_uses_custom_build_dir
+    with_config(build_dir: "assets") do
+      assert_equal({"RAILS_VITE_BUILD_DIR" => "assets"}, RailsVite::Tasks.build_env)
+    end
+  end
+
+  private
+
+  def with_env(env, &block)
+    Rails.stub(:env, ActiveSupport::EnvironmentInquirer.new(env), &block)
+  end
+
+  def with_config(**options, &block)
+    config = RailsVite::Config.new
+    options.each { |key, value| config.public_send(:"#{key}=", value) }
+    RailsVite.stub(:config, config, &block)
+  end
 end
