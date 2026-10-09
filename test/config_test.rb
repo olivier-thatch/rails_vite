@@ -75,9 +75,21 @@ class ConfigTest < Minitest::Test
   end
 
   def test_dev_server_not_running_with_dead_pid
-    with_dev_meta(pid: dead_pid) do
+    with_dev_meta(pid: dead_pid, hostname: Socket.gethostname) do
       refute @config.dev_server_running?
       assert_nil @config.dev_server_url
+    end
+  end
+
+  def test_dev_server_running_with_dead_pid_from_another_host
+    with_dev_meta(pid: dead_pid, hostname: "#{Socket.gethostname}-other") do
+      assert @config.dev_server_running?
+    end
+  end
+
+  def test_dev_server_running_with_dead_pid_without_hostname
+    with_dev_meta(pid: dead_pid) do
+      assert @config.dev_server_running?
     end
   end
 
@@ -86,7 +98,7 @@ class ConfigTest < Minitest::Test
       File.write(File.join(dir, "rails-vite.json"), '{"sourceDir":"app/frontend"}')
       @config.manifest_path = Pathname.new(File.join(dir, "manifest.json"))
 
-      with_dev_meta(pid: dead_pid) do
+      with_dev_meta(pid: dead_pid, hostname: Socket.gethostname) do
         assert_equal "app/frontend", @config.source_dir
       end
     end

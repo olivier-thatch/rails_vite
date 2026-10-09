@@ -79,7 +79,7 @@ module RailsVite
 
     def load_plugin_meta
       meta = JSON.parse(dev_meta_path.read)
-      return meta if dev_server_alive?(meta["pid"])
+      return meta if dev_server_alive?(meta)
 
       load_build_meta
     rescue Errno::ENOENT
@@ -94,8 +94,10 @@ module RailsVite
 
     # A hard kill of Vite (SIGKILL, OOM) does not remove the dev meta file.
     # Ignore the file when its process is gone.
-    def dev_server_alive?(pid)
+    def dev_server_alive?(meta)
+      pid = meta["pid"]
       return true unless pid.is_a?(Integer) && pid.positive?
+      return true unless meta["hostname"] == Socket.gethostname
 
       Process.kill(0, pid)
       true
