@@ -206,6 +206,7 @@ export default defineConfig({
 | `buildDir` | `'vite'` | Build output subdirectory inside `public/` |
 | `publicDir` | `'public'` | Public directory |
 | `refresh` | `true` | Paths to watch for full-page reload. `true` watches `app/views/**` and `app/helpers/**` |
+| `refreshDelay` | `0` | Milliseconds to wait after the last `refresh` change before the full-page reload. Changes within the delay send one reload. Set it (e.g. `300`) when Rails sees template changes late, as with `config.file_watcher = ActiveSupport::EventedFileUpdateChecker`, so the reload does not get the old HTML |
 | `prependSourceDirToEntries` | `true` | When `false`, entries are resolved without the `sourceDir` prefix. Set this when Vite's `root` is your `sourceDir` (see below) |
 
 ### Multiple Entry Points
@@ -403,6 +404,7 @@ export default defineConfig({
 | `outputDir` | `'public/assets'` | Public directory for the full Vite build output |
 | `ssr` | — | SSR entry point. String or `{ entry, outDir }` |
 | `refresh` | — | Paths to watch for full-page reload. `true` watches `app/views/**` and `app/helpers/**` |
+| `refreshDelay` | `0` | Milliseconds to wait after the last `refresh` change before the full-page reload. Changes within the delay send one reload. Set it (e.g. `300`) when Rails sees template changes late, as with `config.file_watcher = ActiveSupport::EventedFileUpdateChecker`, so the reload does not get the old HTML |
 | `devMetaFile` | `'tmp/rails-vite.json'` | Dev metadata file path. Set to `false` to disable |
 
 ### Replacing esbuild
