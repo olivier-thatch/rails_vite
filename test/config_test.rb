@@ -41,6 +41,17 @@ class ConfigTest < Minitest::Test
     assert_equal "/custom", @config.asset_prefix
   end
 
+  def test_default_auto_build_paths
+    assert_includes @config.auto_build_paths, "vite.config.*"
+    assert_includes @config.auto_build_paths, "package.json"
+    assert_includes @config.auto_build_paths, "pnpm-lock.yaml"
+  end
+
+  def test_custom_auto_build_paths
+    @config.auto_build_paths = ["app/views"]
+    assert_equal ["app/views"], @config.auto_build_paths
+  end
+
   def test_dev_server_not_running_without_dev_meta
     refute @config.dev_server_running?
   end

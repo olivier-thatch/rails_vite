@@ -348,6 +348,20 @@ When the Vite dev server is not running, rails_vite automatically rebuilds asset
 
 Freshness is determined by comparing your source files' timestamps against the build manifest's timestamp. Since the manifest lives on disk, unchanged assets are not rebuilt across process restarts — for example, on repeated local system-test runs.
 
+Besides `sourceDir`, auto build checks these files at the app root by default: `vite.config.*`, `postcss.config.*`, `tailwind.config.*`, `tsconfig*.json`, `package.json`, and the package manager lockfile. Use `auto_build_paths` to add other build inputs. Each entry is a path or glob relative to `Rails.root`. Directories are checked recursively, and paths that do not exist are ignored. For example, Tailwind generates CSS from class names in your views, so add the directories it scans:
+
+```ruby
+# config/initializers/rails_vite.rb
+Rails.application.config.rails_vite.auto_build_paths += %w[
+  app/views
+  app/components
+  app/helpers
+  app/assets/stylesheets
+]
+```
+
+Assign the option (`=`) instead of appending to replace the defaults.
+
 Auto builds run quietly (`vite build --logLevel warn`), so they don't clutter your test output; warnings and errors are still shown. Run `rake vite:build` directly for the full build log.
 
 Disable it:

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning].
 - The install generator sets `"type": "module"` in package.json — Vite and rails-vite-plugin are ESM-only, and without it Node fails to load `vite.config.ts` under npm/pnpm/yarn. When package.json pins another `type`, the generator emits `vite.config.mts` instead (#38) ([@skryukov])
 - [aube](https://github.com/aubepkg/aube) package manager support: an `aube-lock.yaml` makes the rake tasks, auto build and the install generator use aube, even next to another lockfile left over from `aube import` (#41) ([@beauraF])
 - `config.rails_vite.vite_executable` sets the executable for `rake vite:build`, test builds and auto builds, so Vite-compatible CLIs with another name, such as Vite+'s `vp`, work. The default is `vite` (#42) ([@cole-robertson])
+- `auto_build_paths` config option: extra paths and globs, relative to `Rails.root`, that auto build checks for changes besides `sourceDir` (for example `app/views` for Tailwind). It defaults to the root-level Vite, PostCSS, Tailwind and TypeScript configs, `package.json`, and the lockfile, so changes to them now trigger a rebuild (#46) ([@olivier-thatch])
 
 ### Changed
 

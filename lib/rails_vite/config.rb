@@ -2,7 +2,7 @@ module RailsVite
   class Config
     META_FILENAME = "rails-vite.json"
 
-    attr_writer :dev_meta_path, :manifest_path, :asset_prefix, :auto_build, :build_dir, :vite_executable
+    attr_writer :dev_meta_path, :manifest_path, :asset_prefix, :auto_build, :build_dir, :vite_executable, :auto_build_paths
 
     def dev_meta_path
       @dev_meta_path || Rails.root.join("tmp", META_FILENAME)
@@ -35,6 +35,19 @@ module RailsVite
     def auto_build?
       return @auto_build if defined?(@auto_build)
       Rails.env.local?
+    end
+
+    # Paths or globs relative to Rails.root that auto build checks for changes,
+    # in addition to source_dir. Directories are walked recursively.
+    def auto_build_paths
+      @auto_build_paths ||= [
+        "vite.config.*",
+        "postcss.config.*",
+        "tailwind.config.*",
+        "tsconfig*.json",
+        "package.json",
+        *Tasks::LOCKFILES.values.flatten
+      ]
     end
 
     def dev_server_running?
