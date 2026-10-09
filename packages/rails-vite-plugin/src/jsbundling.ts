@@ -1,4 +1,5 @@
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import picomatch from 'picomatch'
 import {
@@ -16,12 +17,13 @@ import { resolveEntries, entriesToRollupInput, prefixWithSourceDir, detectEntryp
 import { resolveAlias } from './shared/alias.js'
 import { resolveDevServerUrl, isAddressInfo, replaceOriginPlaceholder } from './shared/dev-server.js'
 import { resolveBundlerOptionsKey, getUserBundlerInput } from './shared/bundler-compat.js'
-import { ensureCommandShouldRunInEnvironment } from './shared/env-guard.js'
-import { refreshPaths, resolveRefreshPaths } from './shared/refresh.js'
+import { ensureCommandShouldRunInEnvironment, isVitestServer } from './shared/env-guard.js'
+import { refreshPaths, resolveRefreshPaths, resolveRefreshWatchPaths } from './shared/refresh.js'
 import { cssExtensions } from './shared/css.js'
 import { readDevServerIndexHtml } from './shared/dev-server-page.js'
 import { resolveNoExternal } from './shared/ssr.js'
 import { bindExitHandler, removeOwnedFile } from './shared/cleanup.js'
+import { createFullReload } from './shared/full-reload.js'
 
 export type { InputOption }
 export { refreshPaths }
@@ -42,6 +44,9 @@ export interface JsbundlingOptions {
    *  Object form allows customizing the output directory. */
   ssr?: string | { entry: string; outDir?: string }
   refresh?: boolean | string | string[]
+  /** Milliseconds to wait after the last `refresh` change before the full-page reload.
+   *  Set this when Rails sees template changes late, e.g. with `EventedFileUpdateChecker`. Default: 0 */
+  refreshDelay?: number
   /** Path to write dev server metadata JSON (default: 'tmp/rails-vite.json').
    *  Set to false to disable. Useful as a bridge for progressive upgrade to the rails_vite gem. */
   devMetaFile?: string | false
@@ -66,6 +71,8 @@ export default function jsbundling(options: JsbundlingOptions = {}): Plugin {
   const entries = resolveEntries(input, sourceDir)
   const rollupInput = entriesToRollupInput(entries, typeof options.input === 'object' && !Array.isArray(options.input))
   const ssrConfig = resolveSsrConfig(options.ssr, sourceDir, outputDir)
+
+  const fullReload = createFullReload(options.refreshDelay ?? 0)
 
   let resolvedConfig: ResolvedConfig
   let reactRefresh = false
@@ -203,11 +210,18 @@ export default function jsbundling(options: JsbundlingOptions = {}): Plugin {
       }
     },
 
+    // Vite also calls closeBundle when the dev server closes.
+    closeBundle() {
+      fullReload.cancel()
+    },
+
     transform(code) {
       return replaceOriginPlaceholder(code, devServerUrl)
     },
 
     configureServer(server) {
+      if (isVitestServer(server)) return
+
       ensureCommandShouldRunInEnvironment('serve', devServerEnv, 'rails-vite-plugin/jsbundling')
 
       let syncTimer: ReturnType<typeof setTimeout> | null = null
@@ -253,7 +267,7 @@ export default function jsbundling(options: JsbundlingOptions = {}): Plugin {
 
           // Write dev meta file for progressive upgrade to the rails_vite gem
           if (devMetaPath) {
-            const meta: Record<string, unknown> = { url: devServerUrl, sourceDir: manifestSourceDir, pid: process.pid }
+            const meta: Record<string, unknown> = { url: devServerUrl, sourceDir: manifestSourceDir, pid: process.pid, hostname: os.hostname() }
             if (epDir) meta.entrypointsDir = epDir
             if (ssrConfig) meta.ssrOutputDir = ssrConfig.outDir
             if (reactRefresh) meta.reactRefresh = true
@@ -302,11 +316,11 @@ export default function jsbundling(options: JsbundlingOptions = {}): Plugin {
       const resolvedRefreshPaths = resolveRefreshPaths(options.refresh)
       if (resolvedRefreshPaths.length) {
         const match = picomatch(resolvedRefreshPaths)
-        server.watcher.add(resolvedRefreshPaths)
+        server.watcher.add(resolveRefreshWatchPaths(resolvedRefreshPaths))
         server.watcher.on('change', (filePath: string) => {
           const relativePath = path.relative(process.cwd(), filePath)
           if (match(relativePath)) {
-            server.hot.send({ type: 'full-reload', path: '*' })
+            fullReload.send(server)
           }
         })
       }

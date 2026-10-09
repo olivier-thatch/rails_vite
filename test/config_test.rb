@@ -53,6 +53,15 @@ class ConfigTest < Minitest::Test
     end
   end
 
+  def test_default_vite_executable
+    assert_equal "vite", @config.vite_executable
+  end
+
+  def test_custom_vite_executable
+    @config.vite_executable = "vp"
+    assert_equal "vp", @config.vite_executable
+  end
+
   def test_custom_dev_meta_path
     @config.dev_meta_path = Rails.root.join("tmp/custom-vite.json")
     assert_equal Rails.root.join("tmp/custom-vite.json"), @config.dev_meta_path
@@ -68,6 +77,17 @@ class ConfigTest < Minitest::Test
     assert_equal "/custom", @config.asset_prefix
   end
 
+  def test_default_auto_build_paths
+    assert_includes @config.auto_build_paths, "vite.config.*"
+    assert_includes @config.auto_build_paths, "package.json"
+    assert_includes @config.auto_build_paths, "pnpm-lock.yaml"
+  end
+
+  def test_custom_auto_build_paths
+    @config.auto_build_paths = ["app/views"]
+    assert_equal ["app/views"], @config.auto_build_paths
+  end
+
   def test_dev_server_not_running_without_dev_meta
     refute @config.dev_server_running?
   end
@@ -80,6 +100,49 @@ class ConfigTest < Minitest::Test
 
       assert @config.dev_server_running?
       assert_equal "http://localhost:5173", @config.dev_server_url
+    end
+  end
+
+  def test_dev_server_running_with_live_pid
+    with_dev_meta(pid: Process.pid) do
+      assert @config.dev_server_running?
+      assert_equal "http://localhost:5173", @config.dev_server_url
+    end
+  end
+
+  def test_dev_server_not_running_with_dead_pid
+    with_dev_meta(pid: dead_pid, hostname: Socket.gethostname) do
+      refute @config.dev_server_running?
+      assert_nil @config.dev_server_url
+    end
+  end
+
+  def test_dev_server_running_with_dead_pid_from_another_host
+    with_dev_meta(pid: dead_pid, hostname: "#{Socket.gethostname}-other") do
+      assert @config.dev_server_running?
+    end
+  end
+
+  def test_dev_server_running_with_dead_pid_without_hostname
+    with_dev_meta(pid: dead_pid) do
+      assert @config.dev_server_running?
+    end
+  end
+
+  def test_dead_pid_falls_back_to_build_meta
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, "rails-vite.json"), '{"sourceDir":"app/frontend"}')
+      @config.manifest_path = Pathname.new(File.join(dir, "manifest.json"))
+
+      with_dev_meta(pid: dead_pid, hostname: Socket.gethostname) do
+        assert_equal "app/frontend", @config.source_dir
+      end
+    end
+  end
+
+  def test_dev_server_running_with_non_integer_pid
+    with_dev_meta(pid: "123") do
+      assert @config.dev_server_running?
     end
   end
 
@@ -179,5 +242,20 @@ class ConfigTest < Minitest::Test
 
   def with_env(env, &block)
     Rails.stub(:env, ActiveSupport::EnvironmentInquirer.new(env), &block)
+  end
+
+  def with_dev_meta(**extra)
+    Dir.mktmpdir do |dir|
+      meta = File.join(dir, "rails-vite.json")
+      File.write(meta, JSON.generate({url: "http://localhost:5173", sourceDir: "app/javascript", **extra}))
+      @config.dev_meta_path = Pathname.new(meta)
+      yield
+    end
+  end
+
+  def dead_pid
+    pid = Process.spawn("true")
+    Process.wait(pid)
+    pid
   end
 end

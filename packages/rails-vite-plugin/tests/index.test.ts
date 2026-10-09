@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import type { ConfigEnv, Plugin, UserConfig } from 'vite'
 import rails, { refreshPaths } from '../src'
@@ -36,7 +37,7 @@ interface MockServer {
     add: ReturnType<typeof vi.fn>
     on: (event: string, cb: Callback) => void
   }
-  config: { logger: { info: ReturnType<typeof vi.fn> } }
+  config: { logger: { info: ReturnType<typeof vi.fn> }; plugins: Array<{ name: string }> }
   hot: { send: ReturnType<typeof vi.fn> }
   middlewares: { use: ReturnType<typeof vi.fn> }
   _emit: (event: string, ...args: unknown[]) => void
@@ -59,7 +60,7 @@ function createMockServer({ httpServer = true } = {}): MockServer {
       add: vi.fn(),
       on: vi.fn(),
     },
-    config: { logger: { info: vi.fn() } },
+    config: { logger: { info: vi.fn() }, plugins: [] },
     hot: { send: vi.fn() },
     middlewares: { use: vi.fn() },
     _emit(event: string, ...args: unknown[]) {
@@ -463,6 +464,46 @@ describe('rails-vite-plugin', () => {
     )
   })
 
+  it('allows Vitest internal server startup in CI environment', () => {
+    process.env.CI = 'true'
+    const plugin = rails({ input: 'application.js' })
+    getConfig(plugin, {}, SERVE)
+    const server = createMockServer({ httpServer: false })
+    server.config.plugins.push({ name: 'vitest' })
+
+    expect(() => callConfigureServer(plugin, server)).not.toThrow()
+  })
+
+  it('allows Vitest 5 internal server startup in CI environment', () => {
+    process.env.CI = 'true'
+    const plugin = rails({ input: 'application.js' })
+    getConfig(plugin, {}, SERVE)
+    const server = createMockServer({ httpServer: false })
+    server.config.plugins.push({ name: 'vitest:project' })
+
+    expect(() => callConfigureServer(plugin, server)).not.toThrow()
+  })
+
+  it('ignores unnamed plugins when detecting Vitest', () => {
+    process.env.CI = 'true'
+    const plugin = rails({ input: 'application.js' })
+    getConfig(plugin, {}, SERVE)
+    const server = createMockServer({ httpServer: false })
+    server.config.plugins.push({} as { name: string }, { name: 'vitest:project' })
+
+    expect(() => callConfigureServer(plugin, server)).not.toThrow()
+  })
+
+  it('skips dev server setup for Vitest internal server', () => {
+    const plugin = rails({ input: 'application.js' })
+    getConfig(plugin, {}, SERVE)
+    const server = createMockServer()
+    server.config.plugins.push({ name: 'vitest:project' })
+
+    expect(callConfigureServer(plugin, server)).toBeUndefined()
+    expect(server.watcher.add).not.toHaveBeenCalled()
+  })
+
   it('allows config resolution in production environment during serve', () => {
     process.env.RAILS_ENV = 'production'
     const plugin = rails({ input: 'application.js' })
@@ -506,7 +547,7 @@ describe('rails-vite-plugin', () => {
     expect(bindExitHandler).not.toHaveBeenCalled()
   })
 
-  it('writes pid to devMetaFile and registers cleanup after listening', () => {
+  it('writes pid and hostname to devMetaFile and registers cleanup after listening', () => {
     const plugin = rails({ input: 'application.js' })
     getConfig(plugin, {}, SERVE)
     callConfigResolved(plugin)
@@ -521,6 +562,7 @@ describe('rails-vite-plugin', () => {
       url: 'http://localhost:5173',
       sourceDir: 'app/javascript',
       pid: process.pid,
+      hostname: os.hostname(),
     })
     expect(bindExitHandler).toHaveBeenCalledOnce()
   })
@@ -567,6 +609,40 @@ describe('rails-vite-plugin', () => {
       'app/views/**/*.{erb,slim,haml}',
       'app/helpers/**/*.rb',
     ])
+  })
+
+  it('watches the base directories of the refresh globs', () => {
+    const plugin = rails({ input: 'application.js' })
+    getConfig(plugin, {}, SERVE)
+    const server = createMockServer({ httpServer: false })
+    callConfigureServer(plugin, server)
+
+    expect(server.watcher.add).toHaveBeenCalledWith([path.resolve('app/views'), path.resolve('app/helpers')])
+  })
+
+  it('sends a full reload only for files that match the refresh globs', () => {
+    const plugin = rails({ input: 'application.js', refresh: 'config/locales/**/*.yml' })
+    getConfig(plugin, {}, SERVE)
+    const server = createMockServer({ httpServer: false })
+    callConfigureServer(plugin, server)
+
+    expect(server.watcher.add).toHaveBeenCalledWith([path.resolve('config/locales')])
+
+    const onChange = vi.mocked(server.watcher.on).mock.calls.find(([event]) => event === 'change')![1]
+    onChange(path.resolve('config/locales/en.rb'))
+    expect(server.hot.send).not.toHaveBeenCalled()
+
+    onChange(path.resolve('config/locales/admin/en.yml'))
+    expect(server.hot.send).toHaveBeenCalledWith({ type: 'full-reload', path: '*' })
+  })
+
+  it('does not watch refresh paths when refresh is false', () => {
+    const plugin = rails({ input: 'application.js', refresh: false })
+    getConfig(plugin, {}, SERVE)
+    const server = createMockServer({ httpServer: false })
+    callConfigureServer(plugin, server)
+
+    expect(server.watcher.add).not.toHaveBeenCalled()
   })
 
   it('has the correct plugin name', () => {
