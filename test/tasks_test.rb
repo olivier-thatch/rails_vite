@@ -40,10 +40,22 @@ class TasksTest < Minitest::Test
     assert_equal :npm, RailsVite::Tasks.tool
   end
 
+  def test_detects_aube_from_aube_lock
+    FileUtils.touch("aube-lock.yaml")
+    assert_equal :aube, RailsVite::Tasks.tool
+  end
+
   def test_bun_lockfile_takes_priority
     FileUtils.touch("bun.lockb")
     FileUtils.touch("yarn.lock")
     assert_equal :bun, RailsVite::Tasks.tool
+  end
+
+  def test_aube_lockfile_takes_priority
+    FileUtils.touch("aube-lock.yaml")
+    FileUtils.touch("bun.lock")
+    FileUtils.touch("pnpm-lock.yaml")
+    assert_equal :aube, RailsVite::Tasks.tool
   end
 
   def test_install_command
@@ -82,6 +94,14 @@ class TasksTest < Minitest::Test
     assert_equal "pnpm vite build", RailsVite::Tasks.build_command
   end
 
+  def test_aube_commands
+    FileUtils.touch("aube-lock.yaml")
+    assert_equal "aube install", RailsVite::Tasks.install_command
+    assert_equal "aube add -D vite", RailsVite::Tasks.add_command("vite")
+    assert_equal "aube exec vite", RailsVite::Tasks.dev_command
+    assert_equal "aube exec vite build", RailsVite::Tasks.build_command
+  end
+
   def test_precompile_command_prefers_package_json_build_script
     FileUtils.touch("package-lock.json")
     write_package_json(scripts: {build: "vite build && vite build --ssr"})
@@ -93,7 +113,8 @@ class TasksTest < Minitest::Test
 
     {"yarn.lock" => "yarn run build",
      "pnpm-lock.yaml" => "pnpm run build",
-     "bun.lock" => "bun run build"}.each do |lockfile, expected|
+     "bun.lock" => "bun run build",
+     "aube-lock.yaml" => "aube run build"}.each do |lockfile, expected|
       FileUtils.touch(lockfile)
       assert_equal expected, RailsVite::Tasks.precompile_command
       FileUtils.rm(lockfile)
