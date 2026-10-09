@@ -387,6 +387,8 @@ Rails.application.config.rails_vite.build_mode = "e2e"   # --mode e2e
 
 The build mode does not change the build directory: the test environment still builds to `public/vite-test/`. The gem passes its `build_dir` to the plugin in the `RAILS_VITE_BUILD_DIR` environment variable, so the gem and the plugin always use the same directory. If you run `vite build` yourself, set `RAILS_VITE_BUILD_DIR` or the plugin's `buildDir` option to match.
 
+Upgrade `rails-vite-plugin` together with the gem: older plugin versions ignore `RAILS_VITE_BUILD_DIR` and build every mode other than `test` into `public/vite/`.
+
 ## Testing the Build
 
 To verify your production build works in development:
