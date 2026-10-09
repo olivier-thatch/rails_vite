@@ -384,7 +384,7 @@ rake vite:build         # build assets
 bin/rails s             # start Rails without Vite dev server
 ```
 
-Without the Vite dev server running (no `tmp/rails-vite.json`), Rails serves built assets from `public/vite/`. To switch back to dev mode, start Vite again — the dev metadata takes priority.
+Without the Vite dev server running (no `tmp/rails-vite.json`, or its Vite process is gone), Rails serves built assets from `public/vite/`. To switch back to dev mode, start Vite again — the dev metadata takes priority.
 
 Clean up built assets with `rake vite:clobber`.
 

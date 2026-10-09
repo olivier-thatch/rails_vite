@@ -1,5 +1,6 @@
 require "json"
 require "digest"
+require "socket"
 
 require_relative "rails_vite/errors"
 require_relative "rails_vite/manifest"

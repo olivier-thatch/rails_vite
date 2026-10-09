@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning].
 - Allow Vitest's internal Vite server to start in CI. `rails()` and `jsbundling()` now skip the dev-server environment guard and dev server setup under Vitest (#43) ([@cole-robertson])
 - Production tags now link the CSS of chunks an entry imports, including nested and shared chunks, not just the entry's own CSS. Chunk CSS comes before the entry's CSS, matching Vite's HTML output, and CSS shared by several entries in one `vite_tags` call is linked once (#40) ([@madogiwa0124])
 - Watch the base directories of the `refresh` globs, so template and helper changes trigger a full reload on Linux. Vite's watcher disables globbing, so the globs were watched as literal paths that don't exist. On Linux this also stopped change events for the nested view directories ([@olivier-thatch])
+- Ignore a dev metadata file whose Vite process is gone. After a hard kill (SIGKILL, OOM killer), `vite_tags` no longer link to a dead dev server, and Rails started afterwards runs auto builds again. The plugin now records its hostname, and the pid is only checked when Vite runs on the same host, so Vite in another container still counts as running. Needs both the updated gem and plugin (#48) ([@olivier-thatch])
 
 ## rails_vite@0.2.3 / rails-vite-plugin@0.2.5 - 2026-06-09
 
