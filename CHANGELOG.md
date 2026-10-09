@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning].
 
 ### Added
 
-- `refreshDelay` plugin option for `rails()` and `jsbundling()`. It waits the given milliseconds after the last `refresh` change before the full-page reload, and sends one reload for a burst of changes. Use it when Rails sees template changes late, e.g. with `EventedFileUpdateChecker`. Default: `0`, which reloads at once as before ([@olivier-thatch])
+- `refreshDelay` plugin option for `rails()` and `jsbundling()`. It waits the given milliseconds after the last `refresh` change before the full-page reload, and sends one reload for a burst of changes. Use it when Rails sees template changes late, e.g. with `EventedFileUpdateChecker`. Default: `0`, which reloads at once as before (#45) ([@olivier-thatch])
 
 ## rails_vite@0.2.3 / rails-vite-plugin@0.2.5 - 2026-06-09
 
