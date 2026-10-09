@@ -40,7 +40,7 @@ interface MockServer {
     add: ReturnType<typeof vi.fn>
     on: (event: string, cb: Function) => void
   }
-  config: { logger: { info: ReturnType<typeof vi.fn> } }
+  config: { logger: { info: ReturnType<typeof vi.fn> }; plugins: Array<{ name: string }> }
   hot: { send: ReturnType<typeof vi.fn> }
   middlewares: { use: ReturnType<typeof vi.fn> }
   _emit: (event: string, ...args: unknown[]) => void
@@ -67,7 +67,7 @@ function createMockServer(): MockServer {
         watcherListeners[event].push(cb)
       },
     },
-    config: { logger: { info: vi.fn() } },
+    config: { logger: { info: vi.fn() }, plugins: [] },
     hot: { send: vi.fn() },
     middlewares: { use: vi.fn() },
     _emit(event: string, ...args: unknown[]) {
@@ -567,6 +567,37 @@ describe('rails-vite-plugin/jsbundling', () => {
     )
   })
 
+  it('allows Vitest internal server startup in CI environment', () => {
+    process.env.CI = 'true'
+    const plugin = jsbundling({ input: 'application.js' })
+    getConfig(plugin, {}, SERVE)
+    const server = { ...createMockServer(), httpServer: undefined }
+    server.config.plugins.push({ name: 'vitest' })
+
+    expect(() => callConfigureServer(plugin, server)).not.toThrow()
+  })
+
+  it('allows Vitest 5 internal server startup in CI environment', () => {
+    process.env.CI = 'true'
+    const plugin = jsbundling({ input: 'application.js' })
+    getConfig(plugin, {}, SERVE)
+    const server = { ...createMockServer(), httpServer: undefined }
+    server.config.plugins.push({ name: 'vitest:project' })
+
+    expect(() => callConfigureServer(plugin, server)).not.toThrow()
+  })
+
+  it('skips dev server setup for Vitest internal server', () => {
+    const plugin = jsbundling({ input: 'application.js' })
+    getConfig(plugin, {}, SERVE)
+    const server = createMockServer()
+    server.config.plugins.push({ name: 'vitest:project' })
+
+    expect(callConfigureServer(plugin, server)).toBeUndefined()
+    expect(server.watcher.add).not.toHaveBeenCalled()
+    expect(bindExitHandler).not.toHaveBeenCalled()
+  })
+
   it('allows config resolution in production environment during serve', () => {
     process.env.RAILS_ENV = 'production'
     const plugin = jsbundling({ input: 'application.js' })
@@ -605,6 +636,30 @@ describe('rails-vite-plugin/jsbundling', () => {
       'app/views/**/*.{erb,slim,haml}',
       'app/helpers/**/*.rb',
     ])
+  })
+
+  it('watches the base directories of the refresh globs', () => {
+    const plugin = jsbundling({ input: 'application.js' })
+    getConfig(plugin, {}, SERVE)
+    const server = createMockServer()
+    callConfigureServer(plugin, server)
+
+    expect(server.watcher.add).toHaveBeenCalledWith([path.resolve('app/views'), path.resolve('app/helpers')])
+  })
+
+  it('sends a full reload only for files that match the refresh globs', () => {
+    const plugin = jsbundling({ input: 'application.js', refresh: 'config/locales/**/*.yml' })
+    getConfig(plugin, {}, SERVE)
+    const server = createMockServer()
+    callConfigureServer(plugin, server)
+
+    expect(server.watcher.add).toHaveBeenCalledWith([path.resolve('config/locales')])
+
+    server._emitWatcher('change', path.resolve('config/locales/en.rb'))
+    expect(server.hot.send).not.toHaveBeenCalled()
+
+    server._emitWatcher('change', path.resolve('config/locales/admin/en.yml'))
+    expect(server.hot.send).toHaveBeenCalledWith({ type: 'full-reload', path: '*' })
   })
 
   it('has the correct plugin name', () => {

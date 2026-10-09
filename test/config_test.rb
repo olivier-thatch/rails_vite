@@ -17,6 +17,15 @@ class ConfigTest < Minitest::Test
     assert_equal "/vite", @config.asset_prefix
   end
 
+  def test_default_vite_executable
+    assert_equal "vite", @config.vite_executable
+  end
+
+  def test_custom_vite_executable
+    @config.vite_executable = "vp"
+    assert_equal "vp", @config.vite_executable
+  end
+
   def test_custom_dev_meta_path
     @config.dev_meta_path = Rails.root.join("tmp/custom-vite.json")
     assert_equal Rails.root.join("tmp/custom-vite.json"), @config.dev_meta_path
@@ -30,6 +39,17 @@ class ConfigTest < Minitest::Test
   def test_custom_asset_prefix
     @config.asset_prefix = "/custom"
     assert_equal "/custom", @config.asset_prefix
+  end
+
+  def test_default_auto_build_paths
+    assert_includes @config.auto_build_paths, "vite.config.*"
+    assert_includes @config.auto_build_paths, "package.json"
+    assert_includes @config.auto_build_paths, "pnpm-lock.yaml"
+  end
+
+  def test_custom_auto_build_paths
+    @config.auto_build_paths = ["app/views"]
+    assert_equal ["app/views"], @config.auto_build_paths
   end
 
   def test_dev_server_not_running_without_dev_meta
