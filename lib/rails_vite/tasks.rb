@@ -42,7 +42,7 @@ module RailsVite
     end
 
     def precompile_command
-      return build_command if Rails.env.test? || !package_json_build_script?
+      return build_command if Rails.env.test? || RailsVite.config.build_mode || !package_json_build_script?
       "#{command_for(:run)} build"
     end
 

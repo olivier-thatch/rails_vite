@@ -389,6 +389,8 @@ The build mode does not change the build directory: the test environment still b
 
 Upgrade `rails-vite-plugin` together with the gem: older plugin versions ignore `RAILS_VITE_BUILD_DIR` and build every mode other than `test` into `public/vite/`.
 
+With `build_mode` set, `vite:build` runs `vite build --mode` directly instead of your package.json `build` script, because `--mode` would only reach the last command of a compound script. Build other bundles, such as SSR, in a separate step.
+
 ## Testing the Build
 
 To verify your production build works in development:
@@ -424,7 +426,7 @@ Defaults match the plugin defaults — no config needed if you follow convention
 
 `vite:build` hooks into `assets:precompile` and `test:prepare` automatically. Skip with `SKIP_VITE_BUILD=1`.
 
-`vite:build` prefers your package.json `build` script when one exists (like jsbundling-rails), falling back to a bare `vite build`. Test builds always run `vite build --mode test` directly.
+`vite:build` prefers your package.json `build` script when one exists (like jsbundling-rails), falling back to a bare `vite build`. Test builds, and builds with `build_mode` set, skip the script and run `vite build` directly.
 
 ### Package Manager
 

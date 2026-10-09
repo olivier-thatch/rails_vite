@@ -178,6 +178,22 @@ class TasksTest < Minitest::Test
     end
   end
 
+  def test_precompile_command_skips_build_script_with_build_mode
+    FileUtils.touch("package-lock.json")
+    write_package_json(scripts: {build: "vite build && vite build --ssr"})
+    with_config(build_mode: "e2e") do
+      assert_equal "npx vite build --mode e2e", RailsVite::Tasks.precompile_command
+    end
+  end
+
+  def test_precompile_command_runs_build_script_without_build_mode
+    FileUtils.touch("package-lock.json")
+    write_package_json(scripts: {build: "vite build && vite build --ssr"})
+    with_config(build_mode: nil) do
+      assert_equal "npm run build", RailsVite::Tasks.precompile_command
+    end
+  end
+
   def test_build_command_appends_mode_test_in_test_env
     FileUtils.touch("package-lock.json")
     Rails.stub(:env, ActiveSupport::StringInquirer.new("test")) do
