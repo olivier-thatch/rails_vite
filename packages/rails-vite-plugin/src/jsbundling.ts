@@ -16,7 +16,7 @@ import { resolveEntries, entriesToRollupInput, prefixWithSourceDir, detectEntryp
 import { resolveAlias } from './shared/alias.js'
 import { resolveDevServerUrl, isAddressInfo, replaceOriginPlaceholder } from './shared/dev-server.js'
 import { resolveBundlerOptionsKey, getUserBundlerInput } from './shared/bundler-compat.js'
-import { ensureCommandShouldRunInEnvironment } from './shared/env-guard.js'
+import { ensureCommandShouldRunInEnvironment, isVitestServer } from './shared/env-guard.js'
 import { refreshPaths, resolveRefreshPaths, resolveRefreshWatchPaths } from './shared/refresh.js'
 import { cssExtensions } from './shared/css.js'
 import { readDevServerIndexHtml } from './shared/dev-server-page.js'
@@ -219,6 +219,8 @@ export default function jsbundling(options: JsbundlingOptions = {}): Plugin {
     },
 
     configureServer(server) {
+      if (isVitestServer(server)) return
+
       ensureCommandShouldRunInEnvironment('serve', devServerEnv, 'rails-vite-plugin/jsbundling')
 
       let syncTimer: ReturnType<typeof setTimeout> | null = null

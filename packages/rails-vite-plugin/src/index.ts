@@ -16,7 +16,7 @@ import { resolveInput, detectEntrypointsDir, discoverEntrypointInputs, detectEnt
 import { resolveAlias } from './shared/alias.js'
 import { resolveDevServerUrl, isAddressInfo, replaceOriginPlaceholder } from './shared/dev-server.js'
 import { resolveBundlerOptionsKey, getUserBundlerInput } from './shared/bundler-compat.js'
-import { ensureCommandShouldRunInEnvironment } from './shared/env-guard.js'
+import { ensureCommandShouldRunInEnvironment, isVitestServer } from './shared/env-guard.js'
 import { refreshPaths, resolveRefreshPaths, resolveRefreshWatchPaths } from './shared/refresh.js'
 import { readDevServerIndexHtml } from './shared/dev-server-page.js'
 import { resolveNoExternal } from './shared/ssr.js'
@@ -130,6 +130,8 @@ export default function rails(options: RailsViteOptions = {}): Plugin {
     },
 
     configureServer(server) {
+      if (isVitestServer(server)) return
+
       ensureCommandShouldRunInEnvironment('serve', devServerEnv, 'rails-vite-plugin')
 
       server.httpServer?.once('listening', () => {
