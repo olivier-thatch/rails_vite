@@ -65,12 +65,17 @@ module RailsVite
       Time.now # source dir missing — trigger build to surface the error
     end
 
-    # Globbed on each check so new matches are picked up. Missing paths match nothing.
     def auto_build_path_matches
       root = Rails.root.to_s
       @config.auto_build_paths.flat_map do |pattern|
-        Dir.glob(pattern.to_s, base: root).map { |match| File.expand_path(match, root) }
+        Dir.glob(pattern.to_s, base: root).filter_map { |match| existing_realpath(match, root) }
       end
+    end
+
+    def existing_realpath(path, root)
+      File.realpath(path, root)
+    rescue SystemCallError
+      nil
     end
   end
 end

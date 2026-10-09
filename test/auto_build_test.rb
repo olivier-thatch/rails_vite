@@ -146,6 +146,22 @@ class AutoBuildTest < Minitest::Test
     refute built?
   end
 
+  def test_ignores_broken_symlinks_in_extra_paths
+    File.symlink(File.join(@dir, "missing.js"), File.join(@dir, "vite.config.js"))
+    File.utime(@base_time, @base_time, File.join(@source_dir, "app.js"))
+    write_manifest(mtime: @base_time + 10)
+
+    refute built?
+  end
+
+  def test_builds_when_a_file_in_a_symlinked_extra_directory_is_newer
+    @config.auto_build_paths += ["app/views"]
+    write_input("shared/views/home/index.html.erb", mtime: @base_time)
+    File.symlink(File.join(@dir, "shared/views"), File.join(@dir, "app/views"))
+
+    assert built_after_changing("shared/views/home/index.html.erb")
+  end
+
   def test_skips_build_when_extra_paths_are_older_than_manifest
     @config.auto_build_paths += ["app/views"]
     write_input("app/views/home/index.html.erb", mtime: @base_time)
