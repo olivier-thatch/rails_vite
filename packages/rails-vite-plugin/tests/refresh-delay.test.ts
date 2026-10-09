@@ -42,10 +42,12 @@ describe.each([
   ['jsbundling', (refreshDelay?: number) => jsbundling({ input: 'application.js', refreshDelay })],
 ])('%s refreshDelay', (_, createPlugin) => {
   beforeEach(() => {
+    vi.stubEnv('CI', undefined)
     vi.useFakeTimers()
   })
 
   afterEach(() => {
+    vi.unstubAllEnvs()
     vi.useRealTimers()
   })
 
