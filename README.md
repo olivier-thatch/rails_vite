@@ -381,8 +381,11 @@ Note: for parallel test runners, disable auto build and use `rake vite:build` be
 
 ```ruby
 # config/initializers/rails_vite.rb
-Rails.application.config.rails_vite.build_mode = nil     # no --mode, so Vite uses "production"
-Rails.application.config.rails_vite.build_mode = "e2e"   # --mode e2e
+if Rails.env.test?
+  Rails.application.config.rails_vite.build_mode = nil     # no --mode, so Vite uses "production"
+  # or
+  Rails.application.config.rails_vite.build_mode = "e2e"   # --mode e2e
+end
 ```
 
 The build mode does not change the build directory: the test environment still builds to `public/vite-test/`. The gem passes its `build_dir` to the plugin in the `RAILS_VITE_BUILD_DIR` environment variable, so the gem and the plugin always use the same directory. If you run `vite build` yourself, set `RAILS_VITE_BUILD_DIR` or the plugin's `buildDir` option to match.
