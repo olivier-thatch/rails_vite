@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import type { ConfigEnv, Plugin, UserConfig } from 'vite'
 import jsbundling, { refreshPaths } from '../src/jsbundling'
@@ -921,7 +922,7 @@ describe('rails-vite-plugin/jsbundling', () => {
     expect(fs.rmSync).not.toHaveBeenCalledWith(path.join('tmp', 'rails-vite.json'), { force: true })
   })
 
-  it('writes pid to devMetaFile and registers owned cleanup after listening', () => {
+  it('writes pid and hostname to devMetaFile and registers owned cleanup after listening', () => {
     const plugin = jsbundling({ input: 'application.js' })
     getConfig(plugin, {}, SERVE)
     callConfigResolved(plugin)
@@ -936,6 +937,7 @@ describe('rails-vite-plugin/jsbundling', () => {
       url: 'http://localhost:5173',
       sourceDir: 'app/javascript',
       pid: process.pid,
+      hostname: os.hostname(),
       jsbundling: true,
     })
     expect(bindExitHandler).toHaveBeenCalledTimes(2)

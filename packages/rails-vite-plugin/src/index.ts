@@ -1,4 +1,5 @@
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import picomatch from 'picomatch'
 import {
@@ -140,7 +141,7 @@ export default function rails(options: RailsViteOptions = {}): Plugin {
         if (isAddressInfo(address)) {
           devServerUrl = resolveDevServerUrl(address, resolvedConfig)
 
-          const meta: Record<string, unknown> = { url: devServerUrl, sourceDir: manifestSourceDir, buildDir: effectiveBuildDir, pid: process.pid }
+          const meta: Record<string, unknown> = { url: devServerUrl, sourceDir: manifestSourceDir, buildDir: effectiveBuildDir, pid: process.pid, hostname: os.hostname() }
           if (entrypointsDir) meta.entrypointsDir = entrypointsDir
           if (resolvedSsr) meta.ssrOutputDir = ssrOutDir
           if (reactRefresh) meta.reactRefresh = true

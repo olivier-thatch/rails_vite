@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import type { ConfigEnv, Plugin, UserConfig } from 'vite'
 import rails, { refreshPaths } from '../src'
@@ -520,7 +521,7 @@ describe('rails-vite-plugin', () => {
     expect(bindExitHandler).not.toHaveBeenCalled()
   })
 
-  it('writes pid to devMetaFile and registers cleanup after listening', () => {
+  it('writes pid and hostname to devMetaFile and registers cleanup after listening', () => {
     const plugin = rails({ input: 'application.js' })
     getConfig(plugin, {}, SERVE)
     callConfigResolved(plugin)
@@ -535,6 +536,7 @@ describe('rails-vite-plugin', () => {
       url: 'http://localhost:5173',
       sourceDir: 'app/javascript',
       pid: process.pid,
+      hostname: os.hostname(),
     })
     expect(bindExitHandler).toHaveBeenCalledOnce()
   })
